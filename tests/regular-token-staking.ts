@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Token22Staking } from "../target/types/token22_staking";
+import { Token22Staking } from "../target/types/token_22_staking";
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js'
 import { mintTo, createMint, getAssociatedTokenAddress, createAssociatedTokenAccount, getAccount, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, TokenAccountNotFoundError } from '@solana/spl-token'
 import { delay, safeAirdrop } from './utils/utils'
@@ -135,7 +135,7 @@ describe("Original Token staking", async () => {
     it("Create stake entry for user", async () => {
         const poolStateAcct = await program.account.poolState.fetch(pool)
     
-        const [stakeEntry, stakeentryBump] = await PublicKey.findProgramAddress(
+        const [stakeEntry, stakeEntryBump] = await PublicKey.findProgramAddress(
             [payer.publicKey.toBuffer(), poolStateAcct.tokenMint.toBuffer(), Buffer.from("stake_entry")],
             program.programId
         )
@@ -157,8 +157,8 @@ describe("Original Token staking", async () => {
 
         const stakeAcct = await program.account.stakeEntry.fetch(user1StakeEntry)
         assert(stakeAcct.user.toBase58() == payer.publicKey.toBase58())
-        assert(stakeAcct.balance == 0)
-        assert(stakeAcct.bump == stakeentryBump)
+        assert(stakeAcct.balance.eq(new BN(0)))
+        assert(stakeAcct.bump == stakeEntryBump)
     })
 
     it("Stake tokens!", async () => {
@@ -251,15 +251,15 @@ describe("Original Token staking", async () => {
         userTokenAcct = await getAccount(provider.connection, user1Ata, undefined, TOKEN_PROGRAM_ID)
         stakeVaultAcct = await getAccount(provider.connection, stakeVault, undefined, TOKEN_PROGRAM_ID)
         let userStakeTokenAcct = await getAccount(provider.connection, user1StakeAta, undefined, TOKEN_PROGRAM_ID)
-        console.log("User staking token balance: ", userStakeTokenAcct.amount.toString())
+        // console.log("User staking token balance: ", userStakeTokenAcct.amount.toString())
         assert(userStakeTokenAcct.amount > BigInt(0))
-        assert(userTokenAcct.amount == initialUserTokenAcctBalance + BigInt(initialEntryBalance))
-        assert(stakeVaultAcct.amount == initialVaultBalance - BigInt(initialEntryBalance))
+        assert(userTokenAcct.amount == initialUserTokenAcctBalance + BigInt(initialEntryBalance.toNumber()))
+        assert(stakeVaultAcct.amount == initialVaultBalance - BigInt(initialEntryBalance.toNumber()))
 
         // verify state accounts
         userEntryAcct = await program.account.stakeEntry.fetch(user1StakeEntry)
         poolAcct = await program.account.poolState.fetch(pool)
-        assert(poolAcct.amount.toNumber() == initialPoolAmt.toNumber() - initialEntryBalance)
-        assert(userEntryAcct.balance == 0)
+        assert(poolAcct.amount.toNumber() == initialPoolAmt.toNumber() - initialEntryBalance.toNumber())
+        assert(userEntryAcct.balance.eq(new BN(0)))
     })
 })
