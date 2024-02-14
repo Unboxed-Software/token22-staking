@@ -25,13 +25,12 @@ pub fn handler(ctx: Context<InitializePool>) -> Result <()> {
 
 #[derive(Accounts)]
 pub struct InitializePool<'info> {
-    // PDA, auth over all token vaults
-    /// CHECK: unsafe
+    /// CHECK: PDA, auth over all token vaults
     #[account(
         seeds = [VAULT_AUTH_SEED.as_bytes()],
         bump
     )]
-    pub pool_authority: AccountInfo<'info>,
+    pub pool_authority: UncheckedAccount<'info>,
     // pool state account
     #[account(
         init,

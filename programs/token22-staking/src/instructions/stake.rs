@@ -45,13 +45,12 @@ pub struct Stake<'info> {
         token::token_program = token_program
     )]
     pub token_mint: InterfaceAccount<'info, token_interface::Mint>,
-    // PDA, auth over all token vaults
-    /// CHECK: unsafe
+    /// CHECK: PDA, auth over all token vaults
     #[account(
         seeds = [VAULT_AUTH_SEED.as_bytes()],
         bump
     )]
-    pub pool_authority: AccountInfo<'info>,
+    pub pool_authority: UncheckedAccount<'info>,
     // pool token account for Token Mint
     #[account(
         mut,
