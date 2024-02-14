@@ -11,6 +11,7 @@ pub fn handler(ctx: Context<Unstake>) -> Result <()> {
     
     let user_entry = &mut ctx.accounts.user_stake_entry;
     let amount = user_entry.balance;
+    let decimals = ctx.accounts.token_mint.decimals;
 
     msg!("User stake balance: {}", user_entry.balance);
     msg!("Withdrawing all of users stake balance. Tokens to withdraw: {}", amount);
@@ -26,8 +27,6 @@ pub fn handler(ctx: Context<Unstake>) -> Result <()> {
     let auth_seeds = &[VAULT_AUTH_SEED.as_bytes(), &[auth_bump]];
     let signer = &[&auth_seeds[..]];
 
-    // ***** Should re-think this sequence. Since doing in two separate tx's, one can fail. ***** //
-
     // transfer out_amount from stake vault to user
     let transfer_ix = transfer_checked(
         &ctx.accounts.token_program.key(),
@@ -37,7 +36,7 @@ pub fn handler(ctx: Context<Unstake>) -> Result <()> {
         &ctx.accounts.pool_authority.key(),
         &[&ctx.accounts.pool_authority.key()],
         amount,
-        6
+        decimals
     ).unwrap();
     invoke_signed(
         &transfer_ix,
