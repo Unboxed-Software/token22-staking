@@ -51,6 +51,7 @@ pub struct InitializePool<'info> {
         init,
         token::mint = token_mint,
         token::authority = pool_authority,
+        token::token_program = token_program,
         // use token_mint, pool auth, and constant as seeds for token a vault
         seeds = [token_mint.key().as_ref(), pool_authority.key().as_ref(), VAULT_SEED.as_bytes()],
         bump,

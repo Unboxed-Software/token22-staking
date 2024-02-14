@@ -42,7 +42,7 @@ pub struct Stake<'info> {
     // Mint of token to stake
     #[account(
         mut,
-        token::token_program = token_program
+        mint::token_program = token_program
     )]
     pub token_mint: InterfaceAccount<'info, token_interface::Mint>,
     /// CHECK: PDA, auth over all token vaults
