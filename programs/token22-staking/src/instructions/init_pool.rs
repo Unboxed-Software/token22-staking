@@ -42,7 +42,6 @@ pub struct InitializePool<'info> {
     pub pool_state: Account<'info, PoolState>,
     // Mint of token
     #[account(
-        mut,
         mint::token_program = token_program,
         mint::authority = payer
     )]
