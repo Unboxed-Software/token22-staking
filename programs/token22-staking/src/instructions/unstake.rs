@@ -1,15 +1,16 @@
 use {
     anchor_lang::prelude::*,
     crate::{state::*, errors::*, utils::*},
-    anchor_spl::token_interface,
-    spl_token_2022::instruction::{transfer_checked, mint_to},
-    solana_program::{program::invoke_signed},
+    anchor_spl::{
+        token_interface,
+        token_2022::{TransferChecked, transfer_checked, mint_to, MintTo},
+    }
 };
 
 pub fn handler(ctx: Context<Unstake>) -> Result <()> {
     check_token_program(ctx.accounts.token_program.key());
     
-    let user_entry = &mut ctx.accounts.user_stake_entry;
+    let user_entry = &ctx.accounts.user_stake_entry;
     let amount = user_entry.balance;
     let decimals = ctx.accounts.token_mint.decimals;
 
@@ -27,54 +28,20 @@ pub fn handler(ctx: Context<Unstake>) -> Result <()> {
     let auth_seeds = &[VAULT_AUTH_SEED.as_bytes(), &[auth_bump]];
     let signer = &[&auth_seeds[..]];
 
-    // transfer out_amount from stake vault to user
-    let transfer_ix = transfer_checked(
-        &ctx.accounts.token_program.key(),
-        &ctx.accounts.token_vault.key(),
-        &ctx.accounts.token_mint.key(),
-        &ctx.accounts.user_token_account.key(),
-        &ctx.accounts.pool_authority.key(),
-        &[&ctx.accounts.pool_authority.key()],
-        amount,
-        decimals
-    ).unwrap();
-    invoke_signed(
-        &transfer_ix,
-        &[
-            ctx.accounts.token_program.to_account_info(),
-            ctx.accounts.token_vault.to_account_info(),
-            ctx.accounts.token_mint.to_account_info(),
-            ctx.accounts.user_token_account.to_account_info(),
-            ctx.accounts.pool_authority.to_account_info(),
-        ],
-        signer
-    )?;
+    // transfer staked tokens
+    transfer_checked(ctx.accounts.transfer_checked_ctx(signer), amount, decimals)?;
 
     // mint users staking rewards, 10x amount of staked tokens
     let stake_rewards = amount.checked_mul(10).unwrap();
 
-    let mint_ix = mint_to(
-        &ctx.accounts.token_program.key(),
-        &ctx.accounts.staking_token_mint.key(),
-        &ctx.accounts.user_stake_token_account.key(),
-        &ctx.accounts.pool_authority.key(),
-        &[&ctx.accounts.pool_authority.key()],
-        stake_rewards
-    ).unwrap();
-    invoke_signed(
-        &mint_ix,
-        &[
-            ctx.accounts.token_program.to_account_info(),
-            ctx.accounts.staking_token_mint.to_account_info(),
-            ctx.accounts.user_stake_token_account.to_account_info(),
-            ctx.accounts.user.to_account_info(),
-            ctx.accounts.pool_authority.to_account_info(),
-        ],
-        signer
-    )?;
+    // mint rewards to user
+    mint_to(ctx.accounts.mint_to_ctx(signer), stake_rewards)?;
+
+    // borrow mutable references
+    let pool_state = &mut ctx.accounts.pool_state;
+    let user_entry = &mut ctx.accounts.user_stake_entry;
 
     // subtract transferred amount from pool total
-    let pool_state = &mut ctx.accounts.pool_state;
     pool_state.amount = pool_state.amount.checked_sub(amount).unwrap();
     msg!("Total staked after withdrawal: {}", pool_state.amount);
 
@@ -156,4 +123,32 @@ pub struct Unstake<'info> {
     user_stake_token_account: InterfaceAccount<'info, token_interface::TokenAccount>,
     pub token_program: Interface<'info, token_interface::TokenInterface>,
     pub system_program: Program<'info, System>
+}
+
+impl<'info> Unstake <'info> {
+    // transfer_checked for Token2022
+    pub fn transfer_checked_ctx<'a>(&'a self, seeds: &'a [&[&[u8]]]) -> CpiContext<'_, '_, '_, 'info, TransferChecked<'info>> {
+
+        let cpi_program = self.token_program.to_account_info();
+        let cpi_accounts = TransferChecked {
+            from: self.token_vault.to_account_info(),
+            to: self.user_token_account.to_account_info(),
+            authority: self.pool_authority.to_account_info(),
+            mint: self.token_mint.to_account_info()
+        };
+
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds)
+    }
+
+    // mint_to
+    pub fn mint_to_ctx<'a>(&'a self, seeds: &'a [&[&[u8]]]) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+        let cpi_program = self.token_program.to_account_info();
+        let cpi_accounts = MintTo {
+            mint: self.staking_token_mint.to_account_info(),
+            to: self.user_stake_token_account.to_account_info(),
+            authority: self.pool_authority.to_account_info()
+        };
+
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds)
+    }
 }
