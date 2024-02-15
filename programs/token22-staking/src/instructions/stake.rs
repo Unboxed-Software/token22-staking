@@ -17,9 +17,10 @@ pub fn handler(ctx: Context<Stake>, stake_amount: u64) -> Result <()> {
     // transfer_checked from token22 program
     transfer_checked(ctx.accounts.transfer_checked_ctx(), stake_amount, decimals)?;
 
-    // update pool state amount
     let pool_state = &mut ctx.accounts.pool_state;
     let user_entry = &mut ctx.accounts.user_stake_entry;
+
+    // update pool state amount
     pool_state.amount = pool_state.amount.checked_add(stake_amount).unwrap();
     msg!("Current pool stake total: {}", pool_state.amount);
 
