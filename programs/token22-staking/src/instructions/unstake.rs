@@ -120,7 +120,7 @@ pub struct Unstake<'info> {
         constraint = user_stake_token_account.key() == user_stake_entry.user_stake_token_account
         @ StakeError::InvalidUserStakeTokenAccount
     )]
-    user_stake_token_account: InterfaceAccount<'info, token_interface::TokenAccount>,
+    pub user_stake_token_account: InterfaceAccount<'info, token_interface::TokenAccount>,
     pub token_program: Interface<'info, token_interface::TokenInterface>,
     pub system_program: Program<'info, System>
 }
