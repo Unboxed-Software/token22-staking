@@ -10,8 +10,9 @@ use {
 pub fn handler(ctx: Context<Stake>, stake_amount: u64) -> Result <()> {
     check_token_program(ctx.accounts.token_program.key());
 
+    let decimals = ctx.accounts.token_mint.decimals;
     // transfer_checked from token22 program
-    transfer_checked(ctx.accounts.transfer_checked_ctx(), stake_amount, 6)?;
+    transfer_checked(ctx.accounts.transfer_checked_ctx(), stake_amount, decimals)?;
 
     msg!("Pool initial total: {}", ctx.accounts.pool_state.amount);
     msg!("User entry initial balance: {}", ctx.accounts.user_stake_entry.balance);
